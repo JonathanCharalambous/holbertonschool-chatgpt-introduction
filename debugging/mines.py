@@ -13,71 +13,72 @@ class Minesweeper:
         self.field = [[' ' for _ in range(width)] for _ in range(height)]
         self.revealed = [[False for _ in range(width)] for _ in range(height)]
 
-    def is_mine(self, x, y):
-        return (y * self.width + x) in self.mines
-
     def print_board(self, reveal=False):
         clear_screen()
-        print('   ' + ' '.join(f"{i:2}" for i in range(self.width)))
+        print('  ' + ' '.join(str(i) for i in range(self.width)))
         for y in range(self.height):
-            print(f"{y:2} ", end='')
+            print(y, end=' ')
             for x in range(self.width):
                 if reveal or self.revealed[y][x]:
-                    if self.is_mine(x, y):
-                        print('* ', end='')
+                    if (y * self.width + x) in self.mines:
+                        print('*', end=' ')
                     else:
                         count = self.count_mines_nearby(x, y)
-                        print(f"{count} " if count > 0 else '  ', end='')
+                        print(count if count > 0 else ' ', end=' ')
                 else:
-                    print('. ', end='')
+                    print('.', end=' ')
             print()
 
     def count_mines_nearby(self, x, y):
         count = 0
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
                 nx, ny = x + dx, y + dy
-                if (nx, ny) != (x, y) and 0 <= nx < self.width and 0 <= ny < self.height:
-                    if self.is_mine(nx, ny):
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if (ny * self.width + nx) in self.mines:
                         count += 1
         return count
 
-    def reveal_cell(self, x, y):
-        if self.is_mine(x, y):
+    def reveal(self, x, y):
+        if (y * self.width + x) in self.mines:
             return False
+        if self.revealed[y][x]:
+            return True
         self.revealed[y][x] = True
         if self.count_mines_nearby(x, y) == 0:
             for dx in [-1, 0, 1]:
                 for dy in [-1, 0, 1]:
                     nx, ny = x + dx, y + dy
-                    if 0 <= nx < self.width and 0 <= ny < self.height and not self.revealed[ny][nx]:
-                        self.reveal_cell(nx, ny)
-        return True
-
-    def check_win(self):
-        for y in range(self.height):
-            for x in range(self.width):
-                if not self.revealed[y][x] and not self.is_mine(x, y):
-                    return False
+                    if 0 <= nx < self.width and 0 <= ny < self.height:
+                        self.reveal(nx, ny)
         return True
 
     def play(self):
+        total_cells = self.width * self.height
+        total_non_mine_cells = total_cells - len(self.mines)
+
         while True:
             self.print_board()
             try:
                 x = int(input("Enter x coordinate: "))
                 y = int(input("Enter y coordinate: "))
-                if not (0 <= x < self.width and 0 <= y < self.height):
-                    print("Coordinates out of bounds. Try again.")
-                    continue
-                if not self.reveal_cell(x, y):
+                if not self.reveal(x, y):
                     self.print_board(reveal=True)
                     print("Game Over! You hit a mine.")
                     break
-                if self.check_win():
+
+                # Count revealed non-mine cells
+                revealed_count = sum(
+                    1 for row in range(self.height) for col in range(self.width)
+                    if self.revealed[row][col] and (row * self.width + col) not in self.mines
+                )
+                if revealed_count == total_non_mine_cells:
                     self.print_board(reveal=True)
-                    print("Congratulations! You cleared the field.")
+                    print("Congratulations! You've won the game.")
                     break
+
             except ValueError:
                 print("Invalid input. Please enter numbers only.")
 
